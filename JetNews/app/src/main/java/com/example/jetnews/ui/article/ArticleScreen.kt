@@ -18,19 +18,19 @@ package com.example.jetnews.ui.article
 
 import android.content.Context
 import android.content.Intent
-import androidx.compose.foundation.Icon
-import androidx.compose.foundation.Text
-import androidx.compose.foundation.contentColor
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.preferredHeight
 import androidx.compose.material.AlertDialog
+import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
+import androidx.compose.material.LocalContentColor
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Scaffold
 import androidx.compose.material.Surface
+import androidx.compose.material.Text
 import androidx.compose.material.TextButton
 import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
@@ -40,15 +40,17 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.savedinstancestate.savedInstanceState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.ContextAmbient
-import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.ui.tooling.preview.Preview
 import com.example.jetnews.R
 import com.example.jetnews.data.Result
 import com.example.jetnews.data.posts.PostsRepository
@@ -57,12 +59,12 @@ import com.example.jetnews.data.posts.impl.post3
 import com.example.jetnews.model.Post
 import com.example.jetnews.ui.ThemedPreview
 import com.example.jetnews.ui.home.BookmarkButton
-import com.example.jetnews.utils.launchUiStateProducer
+import com.example.jetnews.utils.produceUiState
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
 /**
- * Stateful Article Screen that manages state using [launchUiStateProducer]
+ * Stateful Article Screen that manages state using [produceUiState]
  *
  * @param postId (state) the post to show
  * @param postsRepository data source for this screen
@@ -75,7 +77,7 @@ fun ArticleScreen(
     postsRepository: PostsRepository,
     onBack: () -> Unit
 ) {
-    val (post) = launchUiStateProducer(postsRepository, postId) {
+    val (post) = produceUiState(postsRepository, postId) {
         getPost(postId)
     }
     // TODO: handle errors when the repository is capable of creating them
@@ -117,7 +119,7 @@ fun ArticleScreen(
     onToggleFavorite: () -> Unit
 ) {
 
-    var showDialog by savedInstanceState { false }
+    var showDialog by rememberSaveable { mutableStateOf(false) }
     if (showDialog) {
         FunctionalityNotAvailablePopup { showDialog = false }
     }
@@ -129,17 +131,20 @@ fun ArticleScreen(
                     Text(
                         text = "Published in: ${post.publication?.name}",
                         style = MaterialTheme.typography.subtitle2,
-                        color = contentColor()
+                        color = LocalContentColor.current
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Filled.ArrowBack)
+                        Icon(
+                            imageVector = Icons.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.cd_navigate_up)
+                        )
                     }
                 }
             )
         },
-        bodyContent = { innerPadding ->
+        content = { innerPadding ->
             val modifier = Modifier.padding(innerPadding)
             PostContent(post, modifier)
         },
@@ -171,25 +176,34 @@ private fun BottomBar(
 ) {
     Surface(elevation = 2.dp) {
         Row(
-            verticalGravity = Alignment.CenterVertically,
+            verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
-                .preferredHeight(56.dp)
+                .height(56.dp)
                 .fillMaxWidth()
         ) {
             IconButton(onClick = onUnimplementedAction) {
-                Icon(Icons.Filled.FavoriteBorder)
+                Icon(
+                    imageVector = Icons.Filled.FavoriteBorder,
+                    contentDescription = stringResource(R.string.cd_add_to_favorites)
+                )
             }
             BookmarkButton(
                 isBookmarked = isFavorite,
                 onClick = onToggleFavorite
             )
-            val context = ContextAmbient.current
+            val context = LocalContext.current
             IconButton(onClick = { sharePost(post, context) }) {
-                Icon(Icons.Filled.Share)
+                Icon(
+                    imageVector = Icons.Filled.Share,
+                    contentDescription = stringResource(R.string.cd_share)
+                )
             }
             Spacer(modifier = Modifier.weight(1f))
             IconButton(onClick = onUnimplementedAction) {
-                Icon(vectorResource(R.drawable.ic_text_settings))
+                Icon(
+                    painter = painterResource(R.drawable.ic_text_settings),
+                    contentDescription = stringResource(R.string.cd_text_settings)
+                )
             }
         }
     }
@@ -253,7 +267,7 @@ fun PreviewArticleDark() {
 
 @Composable
 private fun loadFakePost(postId: String): Post {
-    val context = ContextAmbient.current
+    val context = LocalContext.current
     val post = runBlocking {
         (BlockingFakePostsRepository(context).getPost(postId) as Result.Success).data
     }

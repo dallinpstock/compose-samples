@@ -16,17 +16,20 @@
 
 package com.example.owl.ui.courses
 
-import androidx.compose.foundation.BaseTextField
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.Icon
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.ScrollableColumn
-import androidx.compose.foundation.Text
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
+import androidx.compose.material.LocalContentColor
 import androidx.compose.material.MaterialTheme
+import androidx.compose.material.Text
 import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
@@ -35,15 +38,17 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.ui.tooling.preview.Preview
 import com.example.owl.R
 import com.example.owl.model.Topic
 import com.example.owl.model.topics
 import com.example.owl.ui.theme.BlueTheme
-import com.example.owl.ui.utils.statusBarsPadding
+import dev.chrisbanes.accompanist.insets.statusBarsPadding
 
 @Composable
 fun SearchCourses(
@@ -51,10 +56,10 @@ fun SearchCourses(
     modifier: Modifier = Modifier
 ) {
     val (searchTerm, updateSearchTerm) = remember { mutableStateOf(TextFieldValue("")) }
-    ScrollableColumn(modifier = modifier.statusBarsPadding()) {
-        AppBar(searchTerm, updateSearchTerm)
+    LazyColumn(modifier = modifier.statusBarsPadding()) {
+        item { AppBar(searchTerm, updateSearchTerm) }
         val filteredTopics = getTopics(searchTerm.text, topics)
-        filteredTopics.forEach { topic ->
+        items(filteredTopics) { topic ->
             Text(
                 text = topic.name,
                 style = MaterialTheme.typography.h5,
@@ -67,6 +72,7 @@ fun SearchCourses(
                         end = 16.dp,
                         bottom = 8.dp
                     )
+                    .wrapContentWidth(Alignment.Start)
             )
         }
     }
@@ -94,25 +100,33 @@ private fun AppBar(
 ) {
     TopAppBar(elevation = 0.dp) {
         Image(
-            asset = vectorResource(id = R.drawable.ic_search),
+            painter = painterResource(id = R.drawable.ic_search),
+            contentDescription = null,
             modifier = Modifier
                 .padding(16.dp)
-                .gravity(Alignment.CenterVertically)
+                .align(Alignment.CenterVertically)
         )
         // TODO hint
-        BaseTextField(
+        BasicTextField(
             value = searchTerm,
             onValueChange = updateSearchTerm,
-            textStyle = MaterialTheme.typography.subtitle1,
+            textStyle = MaterialTheme.typography.subtitle1.copy(
+                color = LocalContentColor.current
+            ),
+            maxLines = 1,
+            cursorBrush = SolidColor(LocalContentColor.current),
             modifier = Modifier
                 .weight(1f)
-                .gravity(Alignment.CenterVertically)
+                .align(Alignment.CenterVertically)
         )
         IconButton(
-            modifier = Modifier.gravity(Alignment.CenterVertically),
+            modifier = Modifier.align(Alignment.CenterVertically),
             onClick = { /* todo */ }
         ) {
-            Icon(Icons.Filled.AccountCircle)
+            Icon(
+                imageVector = Icons.Filled.AccountCircle,
+                contentDescription = stringResource(R.string.label_profile)
+            )
         }
     }
 }

@@ -16,24 +16,29 @@
 
 package androidx.compose.samples.crane.home
 
-import androidx.compose.foundation.layout.Column
+import androidx.compose.material.BackdropScaffold
+import androidx.compose.material.BackdropValue
 import androidx.compose.material.DrawerValue
-import androidx.compose.material.ModalDrawerLayout
+import androidx.compose.material.ExperimentalMaterialApi
+import androidx.compose.material.ModalDrawer
+import androidx.compose.material.rememberBackdropScaffoldState
 import androidx.compose.material.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.samples.crane.base.CraneDrawer
 import androidx.compose.samples.crane.base.CraneTabBar
 import androidx.compose.samples.crane.base.CraneTabs
 import androidx.compose.samples.crane.base.ExploreSection
 import androidx.compose.samples.crane.data.ExploreModel
-import androidx.compose.samples.crane.ui.BackdropFrontLayer
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.viewinterop.viewModel
+import androidx.compose.ui.graphics.Color
+import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.launch
 
 typealias OnExploreItemClicked = (ExploreModel) -> Unit
 
@@ -48,21 +53,26 @@ fun CraneHome(
     modifier: Modifier = Modifier,
 ) {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
-    ModalDrawerLayout(
+    ModalDrawer(
         drawerState = drawerState,
         gesturesEnabled = drawerState.isOpen,
         drawerContent = { CraneDrawer() },
-        bodyContent = {
-            CraneHomeContent(
-                modifier = modifier,
-                onExploreItemClicked = onExploreItemClicked,
-                onDateSelectionClicked = onDateSelectionClicked,
-                openDrawer = { drawerState.open() }
-            )
-        }
-    )
+    ) {
+        val scope = rememberCoroutineScope()
+        CraneHomeContent(
+            modifier = modifier,
+            onExploreItemClicked = onExploreItemClicked,
+            onDateSelectionClicked = onDateSelectionClicked,
+            openDrawer = {
+                scope.launch {
+                    drawerState.open()
+                }
+            }
+        )
+    }
 }
 
+@OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun CraneHomeContent(
     onExploreItemClicked: OnExploreItemClicked,
@@ -76,26 +86,27 @@ fun CraneHomeContent(
     val onPeopleChanged: (Int) -> Unit = { viewModel.updatePeople(it) }
     var tabSelected by remember { mutableStateOf(CraneScreen.Fly) }
 
-    BackdropFrontLayer(
+    BackdropScaffold(
         modifier = modifier,
-        staticChildren = { staticModifier ->
-            Column(modifier = staticModifier) {
-                HomeTabBar(openDrawer, tabSelected, onTabSelected = { tabSelected = it })
-                SearchContent(
-                    tabSelected,
-                    viewModel,
-                    onPeopleChanged,
-                    onDateSelectionClicked,
-                    onExploreItemClicked
-                )
-            }
+        scaffoldState = rememberBackdropScaffoldState(BackdropValue.Revealed),
+        frontLayerScrimColor = Color.Transparent,
+        appBar = {
+            HomeTabBar(openDrawer, tabSelected, onTabSelected = { tabSelected = it })
         },
-        backdropChildren = { backdropModifier ->
+        backLayerContent = {
+            SearchContent(
+                tabSelected,
+                viewModel,
+                onPeopleChanged,
+                onDateSelectionClicked,
+                onExploreItemClicked
+            )
+        },
+        frontLayerContent = {
             when (tabSelected) {
                 CraneScreen.Fly -> {
                     suggestedDestinations?.let { destinations ->
                         ExploreSection(
-                            modifier = backdropModifier,
                             title = "Explore Flights by Destination",
                             exploreList = destinations,
                             onItemClicked = onExploreItemClicked
@@ -104,7 +115,6 @@ fun CraneHomeContent(
                 }
                 CraneScreen.Sleep -> {
                     ExploreSection(
-                        modifier = backdropModifier,
                         title = "Explore Properties by Destination",
                         exploreList = viewModel.hotels,
                         onItemClicked = onExploreItemClicked
@@ -112,7 +122,6 @@ fun CraneHomeContent(
                 }
                 CraneScreen.Eat -> {
                     ExploreSection(
-                        modifier = backdropModifier,
                         title = "Explore Restaurants by Destination",
                         exploreList = viewModel.restaurants,
                         onItemClicked = onExploreItemClicked
@@ -151,8 +160,13 @@ private fun SearchContent(
     onDateSelectionClicked: () -> Unit,
     onExploreItemClicked: OnExploreItemClicked
 ) {
+    // Reading datesSelected State from here instead of passing the String from the ViewModel
+    // to cause a recomposition when the dates change.
+    val datesSelected = viewModel.datesSelected.toString()
+
     when (tabSelected) {
         CraneScreen.Fly -> FlySearchContent(
+            datesSelected,
             searchUpdates = FlySearchContentUpdates(
                 onPeopleChanged = onPeopleChanged,
                 onToDestinationChanged = { viewModel.toDestinationChanged(it) },
@@ -161,6 +175,7 @@ private fun SearchContent(
             )
         )
         CraneScreen.Sleep -> SleepSearchContent(
+            datesSelected,
             sleepUpdates = SleepSearchContentUpdates(
                 onPeopleChanged = onPeopleChanged,
                 onDateSelectionClicked = onDateSelectionClicked,
@@ -168,6 +183,7 @@ private fun SearchContent(
             )
         )
         CraneScreen.Eat -> EatSearchContent(
+            datesSelected,
             eatUpdates = EatSearchContentUpdates(
                 onPeopleChanged = onPeopleChanged,
                 onDateSelectionClicked = onDateSelectionClicked,

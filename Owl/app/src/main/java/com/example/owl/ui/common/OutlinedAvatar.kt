@@ -32,7 +32,8 @@ package com.example.owl.ui.common
  * limitations under the License.
  */
 
-import androidx.compose.foundation.Box
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
@@ -41,9 +42,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.ui.tooling.preview.Preview
 import com.example.owl.ui.theme.BlueTheme
 import com.example.owl.ui.utils.NetworkImage
 
@@ -55,12 +56,14 @@ fun OutlinedAvatar(
     outlineColor: Color = MaterialTheme.colors.surface
 ) {
     Box(
-        backgroundColor = outlineColor,
-        shape = CircleShape,
-        modifier = modifier
+        modifier = modifier.background(
+            color = outlineColor,
+            shape = CircleShape
+        )
     ) {
         NetworkImage(
             url = url,
+            contentDescription = null,
             modifier = Modifier
                 .padding(outlineSize)
                 .fillMaxSize()

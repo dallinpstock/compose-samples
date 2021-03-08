@@ -20,12 +20,9 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.FrameLayout
-import androidx.compose.runtime.Recomposer
-import androidx.compose.ui.platform.setContent
+import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
-import androidx.lifecycle.observe
 import com.example.compose.jetsurvey.R
 import com.example.compose.jetsurvey.Screen
 import com.example.compose.jetsurvey.navigate
@@ -42,15 +39,14 @@ class SignUpFragment : Fragment() {
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View? {
+    ): View {
         viewModel.navigateTo.observe(viewLifecycleOwner) { navigateToEvent ->
             navigateToEvent.getContentIfNotHandled()?.let { navigateTo ->
                 navigate(navigateTo, Screen.SignUp)
             }
         }
 
-        return FrameLayout(requireContext()).apply {
-
+        return ComposeView(requireContext()).apply {
             // In order for savedState to work, the same ID needs to be used for all instances.
             id = R.id.sign_up_fragment
 
@@ -58,7 +54,7 @@ class SignUpFragment : Fragment() {
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
-            setContent(Recomposer.current()) {
+            setContent {
                 JetsurveyTheme {
                     SignUp(
                         onNavigationEvent = { event ->

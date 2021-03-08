@@ -16,26 +16,29 @@
 
 package com.example.jetsnack.ui.components
 
-import androidx.compose.foundation.Box
-import androidx.compose.foundation.Icon
-import androidx.compose.foundation.ScrollableRow
-import androidx.compose.foundation.Text
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.Stack
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.preferredHeight
-import androidx.compose.foundation.layout.preferredHeightIn
-import androidx.compose.foundation.layout.preferredSize
-import androidx.compose.foundation.layout.preferredWidth
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.MaterialTheme
+import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowForward
 import androidx.compose.runtime.Composable
@@ -43,11 +46,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.DensityAmbient
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.ui.tooling.preview.Preview
 import com.example.jetsnack.model.CollectionType
 import com.example.jetsnack.model.Snack
 import com.example.jetsnack.model.SnackCollection
@@ -59,9 +62,9 @@ private val HighlightCardWidth = 170.dp
 private val HighlightCardPadding = 16.dp
 
 // The Cards show a gradient which spans 3 cards and scrolls with parallax.
-@Composable
 private val gradientWidth
-    get() = with(DensityAmbient.current) {
+    @Composable
+    get() = with(LocalDensity.current) {
         (3 * (HighlightCardWidth + HighlightCardPadding).toPx())
     }
 
@@ -75,9 +78,9 @@ fun SnackCollection(
 ) {
     Column(modifier = modifier) {
         Row(
-            verticalGravity = Alignment.CenterVertically,
+            verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
-                .preferredHeightIn(minHeight = 56.dp)
+                .heightIn(min = 56.dp)
                 .padding(start = 24.dp)
         ) {
             Text(
@@ -86,15 +89,18 @@ fun SnackCollection(
                 color = JetsnackTheme.colors.brand,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier
+                    .weight(1f)
+                    .wrapContentWidth(Alignment.Start)
             )
             IconButton(
                 onClick = { /* todo */ },
-                modifier = Modifier.gravity(Alignment.CenterVertically)
+                modifier = Modifier.align(Alignment.CenterVertically)
             ) {
                 Icon(
-                    asset = Icons.Outlined.ArrowForward,
-                    tint = JetsnackTheme.colors.brand
+                    imageVector = Icons.Outlined.ArrowForward,
+                    tint = JetsnackTheme.colors.brand,
+                    contentDescription = null
                 )
             }
         }
@@ -113,23 +119,29 @@ private fun HighlightedSnacks(
     onSnackClick: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val scroll = rememberScrollState(0f)
+    val scroll = rememberScrollState(0)
     val gradient = when (index % 2) {
         0 -> JetsnackTheme.colors.gradient6_1
         else -> JetsnackTheme.colors.gradient6_2
     }
     // The Cards show a gradient which spans 3 cards and scrolls with parallax.
-    val gradientWidth = with(DensityAmbient.current) {
+    val gradientWidth = with(LocalDensity.current) {
         (3 * (HighlightCardWidth + HighlightCardPadding).toPx())
     }
-    ScrollableRow(
-        scrollState = scroll,
-        modifier = modifier
+    LazyRow(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp)
     ) {
-        Spacer(modifier = Modifier.preferredWidth(24.dp))
-        snacks.forEachIndexed { index, snack ->
-            HighlightSnackItem(snack, onSnackClick, index, gradient, gradientWidth, scroll.value)
-            Spacer(modifier = Modifier.preferredWidth(16.dp))
+        itemsIndexed(snacks) { index, snack ->
+            HighlightSnackItem(
+                snack,
+                onSnackClick,
+                index,
+                gradient,
+                gradientWidth,
+                scroll.value
+            )
         }
     }
 }
@@ -140,11 +152,12 @@ private fun Snacks(
     onSnackClick: (Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    ScrollableRow(modifier = modifier) {
-        Spacer(modifier = Modifier.preferredWidth(16.dp))
-        snacks.forEach { snack ->
+    LazyRow(
+        modifier = modifier,
+        contentPadding = PaddingValues(start = 12.dp, end = 12.dp)
+    ) {
+        items(snacks) { snack ->
             SnackItem(snack, onSnackClick)
-            Spacer(modifier = Modifier.preferredWidth(8.dp))
         }
     }
 }
@@ -157,10 +170,14 @@ fun SnackItem(
 ) {
     JetsnackSurface(
         shape = MaterialTheme.shapes.medium,
-        modifier = modifier.padding(bottom = 8.dp)
+        modifier = modifier.padding(
+            start = 4.dp,
+            end = 4.dp,
+            bottom = 8.dp
+        )
     ) {
         Column(
-            horizontalGravity = Alignment.CenterHorizontally,
+            horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier
                 .clickable(onClick = { onSnackClick(snack.id) })
                 .padding(8.dp)
@@ -168,7 +185,8 @@ fun SnackItem(
             SnackImage(
                 imageUrl = snack.imageUrl,
                 elevation = 4.dp,
-                modifier = Modifier.preferredSize(120.dp)
+                contentDescription = null,
+                modifier = Modifier.size(120.dp)
             )
             Text(
                 text = snack.name,
@@ -187,16 +205,16 @@ private fun HighlightSnackItem(
     index: Int,
     gradient: List<Color>,
     gradientWidth: Float,
-    scroll: Float,
+    scroll: Int,
     modifier: Modifier = Modifier
 ) {
-    val left = index * with(DensityAmbient.current) {
+    val left = index * with(LocalDensity.current) {
         (HighlightCardWidth + HighlightCardPadding).toPx()
     }
     JetsnackCard(
         elevation = 4.dp,
         modifier = modifier
-            .preferredSize(
+            .size(
                 width = 170.dp,
                 height = 250.dp
             )
@@ -207,26 +225,27 @@ private fun HighlightSnackItem(
                 .clickable(onClick = { onSnackClick(snack.id) })
                 .fillMaxSize()
         ) {
-            Stack(
+            Box(
                 modifier = Modifier
-                    .preferredHeight(160.dp)
+                    .height(160.dp)
                     .fillMaxWidth()
             ) {
                 val gradientOffset = left - (scroll / 3f)
                 Box(
                     modifier = Modifier
-                        .preferredHeight(100.dp)
+                        .height(100.dp)
                         .fillMaxWidth()
                         .offsetGradientBackground(gradient, gradientWidth, gradientOffset)
                 )
                 SnackImage(
                     imageUrl = snack.imageUrl,
+                    contentDescription = null,
                     modifier = Modifier
-                        .preferredSize(120.dp)
-                        .gravity(Alignment.BottomCenter)
+                        .size(120.dp)
+                        .align(Alignment.BottomCenter)
                 )
             }
-            Spacer(modifier = Modifier.preferredHeight(8.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = snack.name,
                 maxLines = 1,
@@ -235,7 +254,7 @@ private fun HighlightSnackItem(
                 color = JetsnackTheme.colors.textSecondary,
                 modifier = Modifier.padding(horizontal = 16.dp)
             )
-            Spacer(modifier = Modifier.preferredHeight(4.dp))
+            Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = snack.tagline,
                 style = MaterialTheme.typography.body1,
@@ -249,6 +268,7 @@ private fun HighlightSnackItem(
 @Composable
 fun SnackImage(
     imageUrl: String,
+    contentDescription: String?,
     modifier: Modifier = Modifier,
     elevation: Dp = 0.dp
 ) {
@@ -260,6 +280,7 @@ fun SnackImage(
     ) {
         CoilImage(
             data = imageUrl,
+            contentDescription = contentDescription,
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize()
         )
@@ -277,7 +298,7 @@ fun SnackCardPreview() {
             index = 0,
             gradient = JetsnackTheme.colors.gradient6_1,
             gradientWidth = gradientWidth,
-            scroll = 0f
+            scroll = 0
         )
     }
 }
@@ -293,7 +314,7 @@ fun SnackCardDarkPreview() {
             index = 0,
             gradient = JetsnackTheme.colors.gradient6_1,
             gradientWidth = gradientWidth,
-            scroll = 0f
+            scroll = 0
         )
     }
 }

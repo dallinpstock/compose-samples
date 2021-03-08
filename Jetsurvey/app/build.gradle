@@ -21,39 +21,66 @@ plugins {
 }
 
 android {
-    compileSdkVersion 29
+    compileSdkVersion 30
 
     defaultConfig {
         applicationId "com.example.compose.jetsurvey"
         minSdkVersion 21
-        targetSdkVersion 29
+        targetSdkVersion 30
         versionCode 1
         versionName "1.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        // We use a bundled debug keystore, to allow debug builds from CI to be upgradable
+        debug {
+            storeFile rootProject.file('debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
+    }
+
     buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+        }
+
         release {
-            minifyEnabled false
+            minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
+
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
+
     kotlinOptions {
         jvmTarget = '1.8'
     }
 
     buildFeatures {
         compose true
+
+        // Disable unused AGP features
+        buildConfig false
+        aidl false
+        renderScript false
+        resValues false
+        shaders false
     }
 
     composeOptions {
-        kotlinCompilerVersion Libs.Kotlin.version
         kotlinCompilerExtensionVersion Libs.AndroidX.Compose.version
+    }
+
+    packagingOptions {
+        excludes += "/META-INF/AL2.0"
+        excludes += "/META-INF/LGPL2.1"
     }
 
     // TODO: Fix lint errors and remove
@@ -64,6 +91,7 @@ android {
 
 dependencies {
     implementation Libs.Kotlin.stdlib
+    implementation Libs.Coroutines.android
 
     implementation Libs.AndroidX.coreKtx
     implementation Libs.AndroidX.appcompat
@@ -72,6 +100,11 @@ dependencies {
     implementation Libs.AndroidX.Material.material
     implementation Libs.material
 
+    implementation Libs.AndroidX.Lifecycle.viewmodel
+    implementation Libs.AndroidX.Lifecycle.viewModelCompose
+
+    implementation Libs.AndroidX.Activity.activityCompose
+
     implementation Libs.AndroidX.Compose.layout
     implementation Libs.AndroidX.Compose.material
     implementation Libs.AndroidX.Compose.materialIconsExtended
@@ -79,10 +112,5 @@ dependencies {
     implementation Libs.AndroidX.Compose.runtime
     implementation Libs.AndroidX.Compose.runtimeLivedata
 
-    androidTestImplementation Libs.junit
-    androidTestImplementation Libs.AndroidX.Test.core
-    androidTestImplementation Libs.AndroidX.Test.espressoCore
-    androidTestImplementation Libs.AndroidX.Test.rules
-    androidTestImplementation Libs.AndroidX.Test.Ext.junit
-    androidTestImplementation Libs.AndroidX.Compose.uiTest
+    implementation Libs.Accompanist.coil
 }

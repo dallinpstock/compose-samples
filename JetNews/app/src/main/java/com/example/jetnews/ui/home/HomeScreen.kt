@@ -16,51 +16,47 @@
 
 package com.example.jetnews.ui.home
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.ExperimentalAnimationApi
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.Box
-import androidx.compose.foundation.Icon
-import androidx.compose.foundation.ScrollableColumn
-import androidx.compose.foundation.ScrollableRow
-import androidx.compose.foundation.Text
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.contentColor
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Stack
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.preferredSize
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.Divider
 import androidx.compose.material.DrawerValue
-import androidx.compose.material.EmphasisAmbient
+import androidx.compose.material.ExperimentalMaterialApi
+import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.MaterialTheme
-import androidx.compose.material.ProvideEmphasis
 import androidx.compose.material.Scaffold
 import androidx.compose.material.ScaffoldState
-import androidx.compose.material.Snackbar
+import androidx.compose.material.SnackbarResult
 import androidx.compose.material.Surface
+import androidx.compose.material.Text
 import androidx.compose.material.TextButton
 import androidx.compose.material.TopAppBar
 import androidx.compose.material.rememberDrawerState
 import androidx.compose.material.rememberScaffoldState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.launchInComposition
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.ContextAmbient
-import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.ui.tooling.preview.Preview
 import com.example.jetnews.R
 import com.example.jetnews.data.Result
 import com.example.jetnews.data.posts.PostsRepository
@@ -71,14 +67,12 @@ import com.example.jetnews.ui.Screen
 import com.example.jetnews.ui.SwipeToRefreshLayout
 import com.example.jetnews.ui.ThemedPreview
 import com.example.jetnews.ui.state.UiState
-import com.example.jetnews.ui.theme.snackbarAction
-import com.example.jetnews.utils.launchUiStateProducer
-import kotlinx.coroutines.delay
+import com.example.jetnews.utils.produceUiState
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
 /**
- * Stateful HomeScreen uses manages state using [launchUiStateProducer]
+ * Stateful HomeScreen which manages state using [produceUiState]
  *
  * @param navigateTo (event) request navigation to [Screen]
  * @param postsRepository data source for this screen
@@ -90,7 +84,7 @@ fun HomeScreen(
     postsRepository: PostsRepository,
     scaffoldState: ScaffoldState = rememberScaffoldState()
 ) {
-    val (postUiState, refreshPost, clearError) = launchUiStateProducer(postsRepository) {
+    val (postUiState, refreshPost, clearError) = produceUiState(postsRepository) {
         getPosts()
     }
 
@@ -122,11 +116,13 @@ fun HomeScreen(
  * Stateless composable is not coupled to any specific state management.
  *
  * @param posts (state) the data to show on the screen
+ * @param favorites (state) favorite posts
+ * @param onToggleFavorite (event) toggles favorite for a post
  * @param onRefreshPosts (event) request a refresh of posts
  * @param onErrorDismiss (event) request the current error be dismissed
  * @param navigateTo (event) request navigation to [Screen]
- * @param scaffoldState (state) state for the [Scaffold] component on this screen
  */
+@OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun HomeScreen(
     posts: UiState<List<Post>>,
@@ -137,26 +133,55 @@ fun HomeScreen(
     navigateTo: (Screen) -> Unit,
     scaffoldState: ScaffoldState
 ) {
+    if (posts.hasError) {
+        val errorMessage = stringResource(id = R.string.load_error)
+        val retryMessage = stringResource(id = R.string.retry)
+
+        // If onRefreshPosts or onErrorDismiss change while the LaunchedEffect is running,
+        // don't restart the effect and use the latest lambda values.
+        val onRefreshPostsState by rememberUpdatedState(onRefreshPosts)
+        val onErrorDismissState by rememberUpdatedState(onErrorDismiss)
+
+        // Show snackbar using a coroutine, when the coroutine is cancelled the snackbar will
+        // automatically dismiss. This coroutine will cancel whenever posts.hasError is false
+        // (thanks to the surrounding if statement) or if scaffoldState changes.
+        LaunchedEffect(scaffoldState) {
+            val snackbarResult = scaffoldState.snackbarHostState.showSnackbar(
+                message = errorMessage,
+                actionLabel = retryMessage
+            )
+            when (snackbarResult) {
+                SnackbarResult.ActionPerformed -> onRefreshPostsState()
+                SnackbarResult.Dismissed -> onErrorDismissState()
+            }
+        }
+    }
+
+    val coroutineScope = rememberCoroutineScope()
     Scaffold(
         scaffoldState = scaffoldState,
         drawerContent = {
             AppDrawer(
                 currentScreen = Screen.Home,
-                closeDrawer = { scaffoldState.drawerState.close() },
+                closeDrawer = { coroutineScope.launch { scaffoldState.drawerState.close() } },
                 navigateTo = navigateTo
             )
         },
         topBar = {
+            val title = stringResource(id = R.string.app_name)
             TopAppBar(
-                title = { Text(text = "Jetnews") },
+                title = { Text(text = title) },
                 navigationIcon = {
-                    IconButton(onClick = { scaffoldState.drawerState.open() }) {
-                        Icon(vectorResource(R.drawable.ic_jetnews_logo))
+                    IconButton(onClick = { coroutineScope.launch { scaffoldState.drawerState.open() } }) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_jetnews_logo),
+                            contentDescription = stringResource(R.string.cd_open_navigation_drawer)
+                        )
                     }
                 }
             )
         },
-        bodyContent = { innerPadding ->
+        content = { innerPadding ->
             val modifier = Modifier.padding(innerPadding)
             LoadingContent(
                 empty = posts.initialLoad,
@@ -169,7 +194,6 @@ fun HomeScreen(
                         onRefresh = {
                             onRefreshPosts()
                         },
-                        onErrorDismiss = onErrorDismiss,
                         navigateTo = navigateTo,
                         favorites = favorites,
                         onToggleFavorite = onToggleFavorite,
@@ -208,7 +232,7 @@ private fun LoadingContent(
                 Surface(elevation = 10.dp, shape = CircleShape) {
                     CircularProgressIndicator(
                         modifier = Modifier
-                            .preferredSize(36.dp)
+                            .size(36.dp)
                             .padding(4.dp)
                     )
                 }
@@ -223,35 +247,30 @@ private fun LoadingContent(
  *
  * @param posts (state) list of posts and error state to display
  * @param onRefresh (event) request to refresh data
- * @param onErrorDismiss (event) request that the current error be dismissed
  * @param navigateTo (event) request navigation to [Screen]
+ * @param favorites (state) all favorites
+ * @param onToggleFavorite (event) request a single favorite be toggled
  * @param modifier modifier for root element
  */
 @Composable
 private fun HomeScreenErrorAndContent(
     posts: UiState<List<Post>>,
     onRefresh: () -> Unit,
-    onErrorDismiss: () -> Unit,
     navigateTo: (Screen) -> Unit,
     favorites: Set<String>,
     onToggleFavorite: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Stack(modifier = modifier.fillMaxSize()) {
-        if (posts.data != null) {
-            PostList(posts.data, navigateTo, favorites, onToggleFavorite)
-        } else if (!posts.hasError) {
-            // if there are no posts, and no error, let the user refresh manually
-            TextButton(onClick = onRefresh, Modifier.fillMaxSize()) {
-                Text("Tap to load content", textAlign = TextAlign.Center)
-            }
+    if (posts.data != null) {
+        PostList(posts.data, navigateTo, favorites, onToggleFavorite, modifier)
+    } else if (!posts.hasError) {
+        // if there are no posts, and no error, let the user refresh manually
+        TextButton(onClick = onRefresh, modifier.fillMaxSize()) {
+            Text("Tap to load content", textAlign = TextAlign.Center)
         }
-        ErrorSnackbar(
-            showError = posts.hasError,
-            onErrorAction = onRefresh,
-            onDismiss = onErrorDismiss,
-            modifier = Modifier.gravity(Alignment.BottomCenter)
-        )
+    } else {
+        // there's currently an error showing, don't show any content
+        Box(modifier.fillMaxSize()) { /* empty screen */ }
     }
 }
 
@@ -278,11 +297,11 @@ private fun PostList(
     val postsPopular = posts.subList(2, 7)
     val postsHistory = posts.subList(7, 10)
 
-    ScrollableColumn(modifier = modifier) {
-        PostListTopSection(postTop, navigateTo)
-        PostListSimpleSection(postsSimple, navigateTo, favorites, onToggleFavorite)
-        PostListPopularSection(postsPopular, navigateTo)
-        PostListHistorySection(postsHistory, navigateTo)
+    LazyColumn(modifier = modifier) {
+        item { PostListTopSection(postTop, navigateTo) }
+        item { PostListSimpleSection(postsSimple, navigateTo, favorites, onToggleFavorite) }
+        item { PostListPopularSection(postsPopular, navigateTo) }
+        item { PostListHistorySection(postsHistory, navigateTo) }
     }
 }
 
@@ -291,57 +310,12 @@ private fun PostList(
  */
 @Composable
 private fun FullScreenLoading() {
-    Box(modifier = Modifier.fillMaxSize().wrapContentSize(Alignment.Center)) {
-        CircularProgressIndicator()
-    }
-}
-
-/**
- * Display an error snackbar when network requests fail.
- *
- * @param showError (state) if true, this snackbar will display
- * @param modifier modifier for root element
- * @param onErrorAction (event) user has requested error action by clicking on it
- * @param onDismiss (event) request that this snackbar be dismissed.
- */
-@OptIn(ExperimentalAnimationApi::class)
-@Composable
-private fun ErrorSnackbar(
-    showError: Boolean,
-    modifier: Modifier = Modifier,
-    onErrorAction: () -> Unit = { },
-    onDismiss: () -> Unit = { }
-) {
-    // Make Snackbar disappear after 5 seconds if the user hasn't interacted with it
-    launchInComposition(showError) {
-        delay(timeMillis = 5000L)
-        if (showError) { onDismiss() }
-    }
-
-    AnimatedVisibility(
-        visible = showError,
-        enter = slideInVertically(initialOffsetY = { it }),
-        exit = slideOutVertically(targetOffsetY = { it }),
-        modifier = modifier
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .wrapContentSize(Alignment.Center)
     ) {
-        Snackbar(
-            modifier = Modifier.padding(16.dp),
-            text = { Text("Can't update latest news") },
-            action = {
-                TextButton(
-                    onClick = {
-                        onErrorAction()
-                        onDismiss()
-                    },
-                    contentColor = contentColor()
-                ) {
-                    Text(
-                        text = "RETRY",
-                        color = MaterialTheme.colors.snackbarAction
-                    )
-                }
-            }
-        )
+        CircularProgressIndicator()
     }
 }
 
@@ -353,13 +327,11 @@ private fun ErrorSnackbar(
  */
 @Composable
 private fun PostListTopSection(post: Post, navigateTo: (Screen) -> Unit) {
-    ProvideEmphasis(EmphasisAmbient.current.high) {
-        Text(
-            modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp),
-            text = "Top stories for you",
-            style = MaterialTheme.typography.subtitle1
-        )
-    }
+    Text(
+        modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp),
+        text = "Top stories for you",
+        style = MaterialTheme.typography.subtitle1
+    )
     PostCardTop(
         post = post,
         modifier = Modifier.clickable(onClick = { navigateTo(Screen.Article(post.id)) })
@@ -405,15 +377,14 @@ private fun PostListPopularSection(
     navigateTo: (Screen) -> Unit
 ) {
     Column {
-        ProvideEmphasis(EmphasisAmbient.current.high) {
-            Text(
-                modifier = Modifier.padding(16.dp),
-                text = "Popular on Jetnews",
-                style = MaterialTheme.typography.subtitle1
-            )
-        }
-        ScrollableRow(modifier = Modifier.padding(end = 16.dp)) {
-            posts.forEach { post ->
+        Text(
+            modifier = Modifier.padding(16.dp),
+            text = "Popular on Jetnews",
+            style = MaterialTheme.typography.subtitle1
+        )
+
+        LazyRow(modifier = Modifier.padding(end = 16.dp)) {
+            items(posts) { post ->
                 PostCardPopular(post, navigateTo, Modifier.padding(start = 16.dp, bottom = 16.dp))
             }
         }
@@ -468,7 +439,7 @@ private fun PreviewDrawerOpen() {
             drawerState = rememberDrawerState(DrawerValue.Open)
         )
         HomeScreen(
-            postsRepository = BlockingFakePostsRepository(ContextAmbient.current),
+            postsRepository = BlockingFakePostsRepository(LocalContext.current),
             scaffoldState = scaffoldState,
             navigateTo = { }
         )
@@ -486,7 +457,7 @@ fun PreviewHomeScreenBodyDark() {
 
 @Composable
 private fun loadFakePosts(): List<Post> {
-    val context = ContextAmbient.current
+    val context = LocalContext.current
     val posts = runBlocking {
         BlockingFakePostsRepository(context).getPosts()
     }
@@ -501,7 +472,7 @@ private fun PreviewDrawerOpenDark() {
             drawerState = rememberDrawerState(DrawerValue.Open)
         )
         HomeScreen(
-            postsRepository = BlockingFakePostsRepository(ContextAmbient.current),
+            postsRepository = BlockingFakePostsRepository(LocalContext.current),
             scaffoldState = scaffoldState,
             navigateTo = { }
         )

@@ -16,7 +16,6 @@
 
 import com.example.jetcaster.buildsrc.Libs
 import com.example.jetcaster.buildsrc.Versions
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 buildscript {
     repositories {
@@ -31,7 +30,7 @@ buildscript {
 }
 
 plugins {
-    id 'com.diffplug.spotless' version '5.1.1'
+    id 'com.diffplug.spotless' version '5.10.0'
 }
 
 subprojects {
@@ -40,10 +39,10 @@ subprojects {
         mavenCentral()
         jcenter()
 
+        // Jetpack Compose SNAPSHOTs
         if (!Libs.AndroidX.Compose.snapshot.isEmpty()) {
-            maven {
-                url "https://androidx.dev/snapshots/builds/${Libs.AndroidX.Compose.snapshot}/artifacts/ui/repository/"
-            }
+            maven { url "https://androidx.dev/snapshots/builds/${Libs.AndroidX.Compose.snapshot}/artifacts/repository/" }
+            maven { url "http://androidx.dev/storage/repository/androidx/constraintlayout" }
         }
 
         maven { url 'https://oss.sonatype.org/content/repositories/snapshots/' }
@@ -61,7 +60,7 @@ subprojects {
         }
     }
 
-    tasks.withType(KotlinCompile).all {
+    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
         kotlinOptions {
             // Treat all Kotlin warnings as errors
             allWarningsAsErrors = true
@@ -72,8 +71,6 @@ subprojects {
             freeCompilerArgs += '-Xopt-in=kotlinx.coroutines.ExperimentalCoroutinesApi'
             freeCompilerArgs += '-Xopt-in=kotlinx.coroutines.FlowPreview'
             freeCompilerArgs += '-Xopt-in=kotlin.Experimental'
-
-            freeCompilerArgs += "-Xallow-jvm-ir-dependencies"
 
             // Set JVM target to 1.8
             jvmTarget = "1.8"

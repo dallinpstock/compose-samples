@@ -20,13 +20,9 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.FrameLayout
-import androidx.compose.runtime.Recomposer
-import androidx.compose.ui.platform.setContent
+import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
-import androidx.lifecycle.observe
-import com.example.compose.jetsurvey.R
 import com.example.compose.jetsurvey.Screen
 import com.example.compose.jetsurvey.navigate
 import com.example.compose.jetsurvey.theme.JetsurveyTheme
@@ -49,20 +45,15 @@ class WelcomeFragment : Fragment() {
             }
         }
 
-        return FrameLayout(requireContext()).apply {
-            // In order for savedState to work, the same ID needs to be used for all instances.
-            id = R.id.welcome_fragment
-
-            layoutParams = ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
-            )
-            setContent(Recomposer.current()) {
+        return ComposeView(requireContext()).apply {
+            setContent {
                 JetsurveyTheme {
                     WelcomeScreen(
                         onEvent = { event ->
                             when (event) {
-                                is WelcomeEvent.SignInSignUp -> viewModel.handleContinue(event.email)
+                                is WelcomeEvent.SignInSignUp -> viewModel.handleContinue(
+                                    event.email
+                                )
                                 WelcomeEvent.SignInAsGuest -> viewModel.signInAsGuest()
                             }
                         }

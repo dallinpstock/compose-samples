@@ -16,74 +16,80 @@
 
 package com.example.compose.jetsurvey.signinsignup
 
-import androidx.compose.foundation.Box
-import androidx.compose.foundation.Icon
-import androidx.compose.foundation.ScrollableColumn
-import androidx.compose.foundation.Text
-import androidx.compose.foundation.currentTextStyle
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.preferredHeight
-import androidx.compose.foundation.layout.preferredWidth
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
-import androidx.compose.material.EmphasisAmbient
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.ContentAlpha
+import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
+import androidx.compose.material.LocalContentAlpha
+import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.OutlinedButton
 import androidx.compose.material.OutlinedTextField
-import androidx.compose.material.ProvideEmphasis
 import androidx.compose.material.Surface
+import androidx.compose.material.Text
 import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.ExperimentalFocus
 import androidx.compose.ui.focus.FocusState
-import androidx.compose.ui.focusObserver
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.ui.tooling.preview.Preview
 import com.example.compose.jetsurvey.R
 
 @Composable
 fun SignInSignUpScreen(
-    topAppBarText: String,
     onSignedInAsGuest: () -> Unit,
-    onBackPressed: () -> Unit,
     modifier: Modifier = Modifier,
     content: @Composable() () -> Unit
 ) {
-    Column(modifier = modifier) {
-        SignInSignUpTopAppBar(topAppBarText, onBackPressed)
-        ScrollableColumn {
-            Spacer(modifier = Modifier.preferredHeight(44.dp))
-            Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
+    LazyColumn(modifier = modifier) {
+        item {
+            Spacer(modifier = Modifier.height(44.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+            ) {
                 content()
             }
-            Spacer(modifier = Modifier.preferredHeight(16.dp))
+            Spacer(modifier = Modifier.height(16.dp))
             OrSignInAsGuest(
                 onSignedInAsGuest = onSignedInAsGuest,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
             )
         }
     }
 }
 
 @Composable
-private fun SignInSignUpTopAppBar(topAppBarText: String, onBackPressed: () -> Unit) {
+fun SignInSignUpTopAppBar(topAppBarText: String, onBackPressed: () -> Unit) {
     TopAppBar(
         title = {
             Text(
@@ -96,48 +102,70 @@ private fun SignInSignUpTopAppBar(topAppBarText: String, onBackPressed: () -> Un
         },
         navigationIcon = {
             IconButton(onClick = onBackPressed) {
-                Icon(Icons.Filled.ChevronLeft)
+                Icon(
+                    imageVector = Icons.Filled.ChevronLeft,
+                    contentDescription = stringResource(id = R.string.back)
+                )
             }
         },
         // We need to balance the navigation icon, so we add a spacer.
         actions = {
-            Spacer(modifier = Modifier.preferredWidth(68.dp))
+            Spacer(modifier = Modifier.width(68.dp))
         },
         backgroundColor = MaterialTheme.colors.surface,
         elevation = 0.dp
     )
 }
 
-@OptIn(ExperimentalFocus::class)
 @Composable
-fun Email(emailState: TextFieldState = remember { EmailState() }) {
+fun Email(
+    emailState: TextFieldState = remember { EmailState() },
+    imeAction: ImeAction = ImeAction.Next,
+    onImeAction: () -> Unit = {}
+) {
     OutlinedTextField(
         value = emailState.text,
-        onValueChange = { emailState.text = it },
+        onValueChange = {
+            emailState.text = it
+        },
         label = {
-            ProvideEmphasis(emphasis = EmphasisAmbient.current.medium) {
+            CompositionLocalProvider(LocalContentAlpha provides ContentAlpha.medium) {
                 Text(
                     text = stringResource(id = R.string.email),
                     style = MaterialTheme.typography.body2
                 )
             }
         },
-        modifier = Modifier.fillMaxWidth().focusObserver { focusState ->
-            val focused = focusState == FocusState.Active
-            emailState.onFocusChange(focused)
-            if (!focused) {
-                emailState.enableShowErrors()
-            }
-        },
+        modifier = Modifier
+            .fillMaxWidth()
+            .onFocusChanged { focusState ->
+                val focused = focusState == FocusState.Active
+                emailState.onFocusChange(focused)
+                if (!focused) {
+                    emailState.enableShowErrors()
+                }
+            },
         textStyle = MaterialTheme.typography.body2,
-        isErrorValue = emailState.showErrors()
+        isError = emailState.showErrors(),
+        keyboardOptions = KeyboardOptions.Default.copy(imeAction = imeAction),
+        keyboardActions = KeyboardActions(
+            onDone = {
+                onImeAction()
+            }
+        )
     )
 
     emailState.getError()?.let { error -> TextFieldError(textError = error) }
 }
 
 @Composable
-fun Password(label: String, passwordState: TextFieldState) {
+fun Password(
+    label: String,
+    passwordState: TextFieldState,
+    modifier: Modifier = Modifier,
+    imeAction: ImeAction = ImeAction.Done,
+    onImeAction: () -> Unit = {}
+) {
     val showPassword = remember { mutableStateOf(false) }
     OutlinedTextField(
         value = passwordState.text,
@@ -145,10 +173,18 @@ fun Password(label: String, passwordState: TextFieldState) {
             passwordState.text = it
             passwordState.enableShowErrors()
         },
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .onFocusChanged { focusState ->
+                val focused = focusState == FocusState.Active
+                passwordState.onFocusChange(focused)
+                if (!focused) {
+                    passwordState.enableShowErrors()
+                }
+            },
         textStyle = MaterialTheme.typography.body2,
         label = {
-            ProvideEmphasis(emphasis = EmphasisAmbient.current.medium) {
+            CompositionLocalProvider(LocalContentAlpha provides ContentAlpha.medium) {
                 Text(
                     text = label,
                     style = MaterialTheme.typography.body2
@@ -158,11 +194,17 @@ fun Password(label: String, passwordState: TextFieldState) {
         trailingIcon = {
             if (showPassword.value) {
                 IconButton(onClick = { showPassword.value = false }) {
-                    Icon(asset = Icons.Filled.Visibility)
+                    Icon(
+                        imageVector = Icons.Filled.Visibility,
+                        contentDescription = stringResource(id = R.string.hide_password)
+                    )
                 }
             } else {
                 IconButton(onClick = { showPassword.value = true }) {
-                    Icon(asset = Icons.Filled.VisibilityOff)
+                    Icon(
+                        imageVector = Icons.Filled.VisibilityOff,
+                        contentDescription = stringResource(id = R.string.show_password)
+                    )
                 }
             }
         },
@@ -171,7 +213,13 @@ fun Password(label: String, passwordState: TextFieldState) {
         } else {
             PasswordVisualTransformation()
         },
-        isErrorValue = passwordState.showErrors()
+        isError = passwordState.showErrors(),
+        keyboardOptions = KeyboardOptions.Default.copy(imeAction = imeAction),
+        keyboardActions = KeyboardActions(
+            onDone = {
+                onImeAction()
+            }
+        )
     )
 
     passwordState.getError()?.let { error -> TextFieldError(textError = error) }
@@ -183,11 +231,11 @@ fun Password(label: String, passwordState: TextFieldState) {
 @Composable
 fun TextFieldError(textError: String) {
     Row(modifier = Modifier.fillMaxWidth()) {
-        Spacer(modifier = Modifier.preferredWidth(16.dp))
+        Spacer(modifier = Modifier.width(16.dp))
         Text(
             text = textError,
             modifier = Modifier.fillMaxWidth(),
-            style = currentTextStyle().copy(color = MaterialTheme.colors.error)
+            style = LocalTextStyle.current.copy(color = MaterialTheme.colors.error)
         )
     }
 }
@@ -199,10 +247,10 @@ fun OrSignInAsGuest(
 ) {
     Column(
         modifier = modifier,
-        horizontalGravity = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Surface {
-            ProvideEmphasis(emphasis = EmphasisAmbient.current.medium) {
+            CompositionLocalProvider(LocalContentAlpha provides ContentAlpha.medium) {
                 Text(
                     text = stringResource(id = R.string.or),
                     style = MaterialTheme.typography.subtitle2
@@ -211,7 +259,9 @@ fun OrSignInAsGuest(
         }
         OutlinedButton(
             onClick = onSignedInAsGuest,
-            modifier = Modifier.fillMaxWidth().padding(top = 20.dp, bottom = 24.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 20.dp, bottom = 24.dp)
         ) {
             Text(text = stringResource(id = R.string.sign_in_guest))
         }
@@ -222,9 +272,7 @@ fun OrSignInAsGuest(
 @Composable
 fun SignInSignUpScreenPreview() {
     SignInSignUpScreen(
-        topAppBarText = "Preview",
         onSignedInAsGuest = {},
-        onBackPressed = {},
         content = {}
     )
 }

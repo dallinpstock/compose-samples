@@ -16,40 +16,43 @@
 
 package com.example.jetnews.ui.interests
 
-import androidx.compose.foundation.Box
-import androidx.compose.foundation.Icon
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.ScrollableColumn
-import androidx.compose.foundation.Text
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.preferredSize
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Divider
 import androidx.compose.material.DrawerValue
+import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Scaffold
 import androidx.compose.material.ScaffoldState
 import androidx.compose.material.Tab
 import androidx.compose.material.TabRow
+import androidx.compose.material.Text
 import androidx.compose.material.TopAppBar
 import androidx.compose.material.rememberDrawerState
 import androidx.compose.material.rememberScaffoldState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.savedinstancestate.savedInstanceState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.res.imageResource
-import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.ui.tooling.preview.Preview
 import com.example.jetnews.R
 import com.example.jetnews.data.Result
 import com.example.jetnews.data.interests.InterestsRepository
@@ -59,7 +62,7 @@ import com.example.jetnews.data.interests.impl.FakeInterestsRepository
 import com.example.jetnews.ui.AppDrawer
 import com.example.jetnews.ui.Screen
 import com.example.jetnews.ui.ThemedPreview
-import com.example.jetnews.utils.launchUiStateProducer
+import com.example.jetnews.utils.produceUiState
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
@@ -82,7 +85,7 @@ enum class Sections(val title: String) {
 class TabContent(val section: Sections, val content: @Composable () -> Unit)
 
 /**
- * Stateful InterestsScreen manages state using [launchUiStateProducer]
+ * Stateful InterestsScreen manages state using [produceUiState]
  *
  * @param navigateTo (event) request navigation to [Screen]
  * @param scaffoldState (state) state for screen Scaffold
@@ -101,7 +104,7 @@ fun InterestsScreen(
     // Describe the screen sections here since each section needs 2 states and 1 event.
     // Pass them to the stateless InterestsScreen using a tabContent.
     val topicsSection = TabContent(Sections.Topics) {
-        val (topics) = launchUiStateProducer(interestsRepository) {
+        val (topics) = produceUiState(interestsRepository) {
             getTopics()
         }
         // collectAsState will read a [Flow] in Compose
@@ -114,7 +117,7 @@ fun InterestsScreen(
     }
 
     val peopleSection = TabContent(Sections.People) {
-        val (people) = launchUiStateProducer(interestsRepository) {
+        val (people) = produceUiState(interestsRepository) {
             getPeople()
         }
         val selectedPeople by interestsRepository.observePeopleSelected().collectAsState(setOf())
@@ -126,10 +129,11 @@ fun InterestsScreen(
     }
 
     val publicationSection = TabContent(Sections.Publications) {
-        val (publications) = launchUiStateProducer(interestsRepository) {
+        val (publications) = produceUiState(interestsRepository) {
             getPublications()
         }
-        val selectedPublications by interestsRepository.observePublicationSelected().collectAsState(setOf())
+        val selectedPublications by interestsRepository.observePublicationSelected()
+            .collectAsState(setOf())
         val onPublicationSelect: (String) -> Unit = {
             coroutineScope.launch { interestsRepository.togglePublicationSelected(it) }
         }
@@ -138,7 +142,7 @@ fun InterestsScreen(
     }
 
     val tabContent = listOf(topicsSection, peopleSection, publicationSection)
-    val (currentSection, updateSection) = savedInstanceState { tabContent.first().section }
+    val (currentSection, updateSection) = rememberSaveable { mutableStateOf(tabContent.first().section) }
     InterestsScreen(
         tabContent = tabContent,
         tab = currentSection,
@@ -166,12 +170,13 @@ fun InterestsScreen(
     navigateTo: (Screen) -> Unit,
     scaffoldState: ScaffoldState,
 ) {
+    val coroutineScope = rememberCoroutineScope()
     Scaffold(
         scaffoldState = scaffoldState,
         drawerContent = {
             AppDrawer(
                 currentScreen = Screen.Interests,
-                closeDrawer = { scaffoldState.drawerState.close() },
+                closeDrawer = { coroutineScope.launch { scaffoldState.drawerState.close() } },
                 navigateTo = navigateTo
             )
         },
@@ -179,13 +184,16 @@ fun InterestsScreen(
             TopAppBar(
                 title = { Text("Interests") },
                 navigationIcon = {
-                    IconButton(onClick = { scaffoldState.drawerState.open() }) {
-                        Icon(vectorResource(R.drawable.ic_jetnews_logo))
+                    IconButton(onClick = { coroutineScope.launch { scaffoldState.drawerState.open() } }) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_jetnews_logo),
+                            contentDescription = stringResource(R.string.cd_open_navigation_drawer)
+                        )
                     }
                 }
             )
         },
-        bodyContent = {
+        content = {
             TabContent(tab, onTabChange, tabContent)
         }
     )
@@ -286,8 +294,8 @@ private fun TabWithTopics(
     selectedTopics: Set<String>,
     onTopicSelect: (String) -> Unit
 ) {
-    ScrollableColumn(modifier = Modifier.padding(top = 16.dp)) {
-        topics.forEach { topic ->
+    LazyColumn(modifier = Modifier.padding(top = 16.dp)) {
+        items(topics) { topic ->
             TopicItem(
                 topic,
                 selected = selectedTopics.contains(topic)
@@ -310,14 +318,16 @@ private fun TabWithSections(
     selectedTopics: Set<TopicSelection>,
     onTopicSelect: (TopicSelection) -> Unit
 ) {
-    ScrollableColumn {
+    LazyColumn {
         sections.forEach { (section, topics) ->
-            Text(
-                text = section,
-                modifier = Modifier.padding(16.dp),
-                style = MaterialTheme.typography.subtitle1
-            )
-            topics.forEach { topic ->
+            item {
+                Text(
+                    text = section,
+                    modifier = Modifier.padding(16.dp),
+                    style = MaterialTheme.typography.subtitle1
+                )
+            }
+            items(topics) { topic ->
                 TopicItem(
                     itemTitle = topic,
                     selected = selectedTopics.contains(TopicSelection(section, topic))
@@ -337,7 +347,7 @@ private fun TabWithSections(
  */
 @Composable
 private fun TopicItem(itemTitle: String, selected: Boolean, onToggle: () -> Unit) {
-    val image = imageResource(R.drawable.placeholder_1_1)
+    val image = painterResource(R.drawable.placeholder_1_1)
     Row(
         modifier = Modifier
             .toggleable(
@@ -347,22 +357,23 @@ private fun TopicItem(itemTitle: String, selected: Boolean, onToggle: () -> Unit
             .padding(horizontal = 16.dp)
     ) {
         Image(
-            image,
-            Modifier
-                .gravity(Alignment.CenterVertically)
-                .preferredSize(56.dp, 56.dp)
+            painter = image,
+            contentDescription = null, // decorative
+            modifier = Modifier
+                .align(Alignment.CenterVertically)
+                .size(56.dp, 56.dp)
                 .clip(RoundedCornerShape(4.dp))
         )
         Text(
             text = itemTitle,
             modifier = Modifier
-                .weight(1f)
-                .gravity(Alignment.CenterVertically)
+                .align(Alignment.CenterVertically)
                 .padding(16.dp),
             style = MaterialTheme.typography.subtitle1
         )
+        Spacer(Modifier.weight(1f))
         SelectTopicButton(
-            modifier = Modifier.gravity(Alignment.CenterVertically),
+            modifier = Modifier.align(Alignment.CenterVertically),
             selected = selected
         )
     }

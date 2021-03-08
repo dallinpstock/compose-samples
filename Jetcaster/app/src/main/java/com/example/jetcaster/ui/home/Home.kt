@@ -16,54 +16,53 @@
 
 package com.example.jetcaster.ui.home
 
-import androidx.compose.foundation.Box
-import androidx.compose.foundation.Icon
-import androidx.compose.foundation.Text
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope.gravity
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.Stack
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.preferredHeight
-import androidx.compose.foundation.layout.preferredHeightIn
-import androidx.compose.foundation.layout.preferredWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.EmphasisAmbient
+import androidx.compose.material.ContentAlpha
+import androidx.compose.material.Icon
 import androidx.compose.material.IconButton
+import androidx.compose.material.LocalContentAlpha
 import androidx.compose.material.MaterialTheme
-import androidx.compose.material.ProvideEmphasis
 import androidx.compose.material.Surface
 import androidx.compose.material.Tab
-import androidx.compose.material.TabConstants.defaultTabIndicatorOffset
 import androidx.compose.material.TabPosition
 import androidx.compose.material.TabRow
+import androidx.compose.material.TabRowDefaults.tabIndicatorOffset
+import androidx.compose.material.Text
+import androidx.compose.material.TopAppBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.launchInComposition
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.AnimationClockAmbient
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.viewModel
-import androidx.ui.tooling.preview.Preview
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.jetcaster.R
 import com.example.jetcaster.data.PodcastWithExtraInfo
 import com.example.jetcaster.ui.home.discover.Discover
@@ -76,16 +75,16 @@ import com.example.jetcaster.util.ToggleFollowPodcastIconButton
 import com.example.jetcaster.util.constrastAgainst
 import com.example.jetcaster.util.quantityStringResource
 import com.example.jetcaster.util.rememberDominantColorState
-import com.example.jetcaster.util.statusBarsPadding
 import com.example.jetcaster.util.verticalGradientScrim
 import dev.chrisbanes.accompanist.coil.CoilImage
+import dev.chrisbanes.accompanist.insets.statusBarsHeight
 import java.time.Duration
 import java.time.LocalDateTime
 import java.time.OffsetDateTime
 
 @Composable
 fun Home() {
-    val viewModel: HomeViewModel = viewModel()
+    val viewModel = viewModel(HomeViewModel::class.java)
 
     val viewState by viewModel.state.collectAsState()
 
@@ -104,36 +103,48 @@ fun Home() {
 
 @Composable
 fun HomeAppBar(
+    backgroundColor: Color,
     modifier: Modifier = Modifier
 ) {
-    Stack(modifier = modifier) {
-        ProvideEmphasis(EmphasisAmbient.current.high) {
-            Icon(
-                asset = vectorResource(R.drawable.ic_text_logo),
-                modifier = Modifier.gravity(Alignment.Center)
-                    .padding(8.dp)
-                    .preferredHeightIn(maxHeight = 24.dp)
-            )
-        }
-
-        ProvideEmphasis(EmphasisAmbient.current.medium) {
-            IconButton(
-                onClick = { /* TODO: Open account? */ },
-                modifier = Modifier.gravity(Alignment.CenterStart)
-                    .padding(start = 8.dp)
-            ) {
-                Icon(Icons.Default.AccountCircle)
+    TopAppBar(
+        title = {
+            Row {
+                Image(
+                    painter = painterResource(R.drawable.ic_logo),
+                    contentDescription = null
+                )
+                Icon(
+                    painter = painterResource(R.drawable.ic_text_logo),
+                    contentDescription = stringResource(R.string.app_name),
+                    modifier = Modifier
+                        .padding(start = 4.dp)
+                        .heightIn(max = 24.dp)
+                )
             }
-
-            IconButton(
-                onClick = { /* TODO: Open search */ },
-                modifier = Modifier.gravity(Alignment.CenterEnd)
-                    .padding(end = 8.dp)
-            ) {
-                Icon(Icons.Filled.Search)
+        },
+        backgroundColor = backgroundColor,
+        actions = {
+            CompositionLocalProvider(LocalContentAlpha provides ContentAlpha.medium) {
+                IconButton(
+                    onClick = { /* TODO: Open search */ }
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Search,
+                        contentDescription = stringResource(R.string.cd_search)
+                    )
+                }
+                IconButton(
+                    onClick = { /* TODO: Open account? */ }
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.AccountCircle,
+                        contentDescription = stringResource(R.string.cd_account)
+                    )
+                }
             }
-        }
-    }
+        },
+        modifier = modifier
+    )
 }
 
 /**
@@ -164,53 +175,59 @@ fun HomeContent(
         }
 
         DynamicThemePrimaryColorsFromImage(dominantColorState) {
-            val clock = AnimationClockAmbient.current
-            val pagerState = remember(clock) { PagerState(clock) }
+
+            val pagerState = remember { PagerState() }
 
             val selectedImageUrl = featuredPodcasts.getOrNull(pagerState.currentPage)
                 ?.podcast?.imageUrl
 
             // When the selected image url changes, call updateColorsFromImageUrl() or reset()
             if (selectedImageUrl != null) {
-                launchInComposition(selectedImageUrl) {
+                LaunchedEffect(selectedImageUrl) {
                     dominantColorState.updateColorsFromImageUrl(selectedImageUrl)
                 }
             } else {
                 dominantColorState.reset()
             }
 
-            Stack(Modifier.fillMaxWidth()) {
-                Box(
-                    Modifier.matchParentSize()
-                        .verticalGradientScrim(
-                            color = MaterialTheme.colors.primary.copy(alpha = 0.38f),
-                            startYPercentage = 1f,
-                            endYPercentage = 0f
-                        )
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalGradientScrim(
+                        color = MaterialTheme.colors.primary.copy(alpha = 0.38f),
+                        startYPercentage = 1f,
+                        endYPercentage = 0f
+                    )
+            ) {
+                val appBarColor = MaterialTheme.colors.surface.copy(alpha = 0.87f)
+
+                // Draw a scrim over the status bar which matches the app bar
+                Spacer(
+                    Modifier
+                        .background(appBarColor)
+                        .fillMaxWidth()
+                        .statusBarsHeight()
                 )
 
-                Column(Modifier.fillMaxWidth()) {
-                    HomeAppBar(
-                        Modifier.fillMaxWidth()
-                            .statusBarsPadding()
-                            .preferredHeight(56.dp) /* TODO: change height to 48.dp in landscape */
+                HomeAppBar(
+                    backgroundColor = appBarColor,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                if (featuredPodcasts.isNotEmpty()) {
+                    Spacer(Modifier.height(16.dp))
+
+                    FollowedPodcasts(
+                        items = featuredPodcasts,
+                        pagerState = pagerState,
+                        onPodcastUnfollowed = onPodcastUnfollowed,
+                        modifier = Modifier
+                            .padding(start = Keyline1, top = 16.dp, end = Keyline1)
+                            .fillMaxWidth()
+                            .height(200.dp)
                     )
 
-                    if (featuredPodcasts.isNotEmpty()) {
-                        Spacer(Modifier.height(16.dp))
-
-                        FollowedPodcasts(
-                            items = featuredPodcasts,
-                            pagerState = pagerState,
-                            onPodcastUnfollowed = onPodcastUnfollowed,
-                            modifier = Modifier
-                                .padding(start = Keyline1, top = 16.dp, end = Keyline1)
-                                .fillMaxWidth()
-                                .preferredHeight(200.dp)
-                        )
-
-                        Spacer(Modifier.height(16.dp))
-                    }
+                    Spacer(Modifier.height(16.dp))
                 }
             }
         }
@@ -232,7 +249,11 @@ fun HomeContent(
                 // TODO
             }
             HomeCategory.Discover -> {
-                Discover(Modifier.fillMaxWidth().weight(1f))
+                Discover(
+                    Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                )
             }
         }
     }
@@ -248,7 +269,7 @@ private fun HomeCategoryTabs(
     val selectedIndex = categories.indexOfFirst { it == selectedCategory }
     val indicator = @Composable { tabPositions: List<TabPosition> ->
         HomeCategoryTabIndicator(
-            Modifier.defaultTabIndicatorOffset(tabPositions[selectedIndex])
+            Modifier.tabIndicatorOffset(tabPositions[selectedIndex])
         )
     }
 
@@ -266,7 +287,8 @@ private fun HomeCategoryTabs(
                         text = when (category) {
                             HomeCategory.Library -> stringResource(R.string.home_library)
                             HomeCategory.Discover -> stringResource(R.string.home_discover)
-                        }
+                        },
+                        style = MaterialTheme.typography.body2
                     )
                 }
             )
@@ -277,25 +299,22 @@ private fun HomeCategoryTabs(
 @Composable
 fun HomeCategoryTabIndicator(
     modifier: Modifier = Modifier,
-    color: Color = MaterialTheme.colors.primary
+    color: Color = MaterialTheme.colors.onSurface
 ) {
     Spacer(
-        modifier.preferredWidth(112.dp)
-            .preferredHeight(4.dp)
-            .gravity(Alignment.CenterHorizontally)
-            .background(color, RoundedCornerShape(topLeftPercent = 100, topRightPercent = 100))
+        modifier
+            .padding(horizontal = 24.dp)
+            .height(4.dp)
+            .background(color, RoundedCornerShape(topStartPercent = 100, topEndPercent = 100))
     )
 }
 
 @Composable
 fun FollowedPodcasts(
     items: List<PodcastWithExtraInfo>,
-    pagerState: PagerState = run {
-        val clock = AnimationClockAmbient.current
-        remember(clock) { PagerState(clock) }
-    },
+    modifier: Modifier = Modifier,
+    pagerState: PagerState = remember { PagerState() },
     onPodcastUnfollowed: (String) -> Unit,
-    modifier: Modifier = Modifier
 ) {
     pagerState.maxPage = (items.size - 1).coerceAtLeast(0)
 
@@ -308,34 +327,33 @@ fun FollowedPodcasts(
             podcastImageUrl = podcast.imageUrl,
             lastEpisodeDate = lastEpisodeDate,
             onUnfollowedClick = { onPodcastUnfollowed(podcast.uri) },
-            modifier = Modifier.padding(4.dp)
+            modifier = Modifier
+                .padding(4.dp)
                 .fillMaxHeight()
-                .scalePagerItems(unselectedScale = PodcastCarouselUnselectedScale)
         )
     }
 }
 
-private const val PodcastCarouselUnselectedScale = 0.85f
-
 @Composable
 private fun FollowedPodcastCarouselItem(
+    modifier: Modifier = Modifier,
     podcastImageUrl: String? = null,
     lastEpisodeDate: OffsetDateTime? = null,
     onUnfollowedClick: () -> Unit,
-    modifier: Modifier = Modifier
 ) {
     Column(
         modifier.padding(horizontal = 12.dp, vertical = 8.dp)
     ) {
-        Stack(
+        Box(
             Modifier
                 .weight(1f)
-                .gravity(Alignment.CenterHorizontally)
+                .align(Alignment.CenterHorizontally)
                 .aspectRatio(1f)
         ) {
             if (podcastImageUrl != null) {
                 CoilImage(
                     data = podcastImageUrl,
+                    contentDescription = null,
                     contentScale = ContentScale.Crop,
                     loading = { /* TODO do something better here */ },
                     modifier = Modifier
@@ -344,24 +362,23 @@ private fun FollowedPodcastCarouselItem(
                 )
             }
 
-            ProvideEmphasis(EmphasisAmbient.current.high) {
-                ToggleFollowPodcastIconButton(
-                    onClick = onUnfollowedClick,
-                    isFollowed = true, /* All podcasts are followed in this feed */
-                    modifier = Modifier.gravity(Alignment.BottomEnd)
-                )
-            }
+            ToggleFollowPodcastIconButton(
+                onClick = onUnfollowedClick,
+                isFollowed = true, /* All podcasts are followed in this feed */
+                modifier = Modifier.align(Alignment.BottomEnd)
+            )
         }
 
         if (lastEpisodeDate != null) {
-            ProvideEmphasis(EmphasisAmbient.current.medium) {
+            CompositionLocalProvider(LocalContentAlpha provides ContentAlpha.medium) {
                 Text(
                     text = lastUpdated(lastEpisodeDate),
                     style = MaterialTheme.typography.caption,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(top = 8.dp)
-                        .gravity(Alignment.CenterHorizontally)
+                    modifier = Modifier
+                        .padding(top = 8.dp)
+                        .align(Alignment.CenterHorizontally)
                 )
             }
         }

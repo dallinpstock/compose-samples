@@ -16,19 +16,18 @@
 
 package com.example.owl.ui.common
 
-import androidx.compose.foundation.Icon
-import androidx.compose.foundation.Text
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.preferredHeight
-import androidx.compose.foundation.layout.preferredSize
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.Icon
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
+import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.OndemandVideo
 import androidx.compose.runtime.Composable
@@ -40,9 +39,9 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.ui.tooling.preview.Preview
 import com.example.owl.R
 import com.example.owl.model.Course
 import com.example.owl.model.courses
@@ -54,7 +53,7 @@ import com.example.owl.ui.utils.NetworkImage
 fun CourseListItem(
     course: Course,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier.fillMaxWidth().preferredHeight(80.dp),
+    modifier: Modifier = Modifier,
     shape: Shape = RectangleShape,
     elevation: Dp = OwlTheme.elevations.card,
     titleStyle: TextStyle = MaterialTheme.typography.subtitle1,
@@ -68,6 +67,7 @@ fun CourseListItem(
         Row(modifier = Modifier.clickable(onClick = onClick)) {
             NetworkImage(
                 url = course.thumbUrl,
+                contentDescription = null,
                 modifier = Modifier.aspectRatio(1f)
             )
             Column(
@@ -87,11 +87,12 @@ fun CourseListItem(
                         .weight(1f)
                         .padding(bottom = 4.dp)
                 )
-                Row(verticalGravity = Alignment.CenterVertically) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        asset = Icons.Rounded.OndemandVideo,
+                        imageVector = Icons.Rounded.OndemandVideo,
                         tint = MaterialTheme.colors.primary,
-                        modifier = Modifier.preferredSize(iconSize)
+                        contentDescription = null,
+                        modifier = Modifier.size(iconSize)
                     )
                     Text(
                         text = stringResource(
@@ -104,11 +105,13 @@ fun CourseListItem(
                         modifier = Modifier
                             .padding(start = 8.dp)
                             .weight(1f)
+                            .wrapContentWidth(Alignment.Start)
                     )
                     NetworkImage(
                         url = course.instructor,
+                        contentDescription = null,
                         modifier = Modifier
-                            .preferredSize(28.dp)
+                            .size(28.dp)
                             .clip(CircleShape)
                     )
                 }

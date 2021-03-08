@@ -24,7 +24,7 @@ import androidx.compose.material.Typography
 import androidx.compose.material.darkColors
 import androidx.compose.material.lightColors
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.Providers
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.example.owl.R
@@ -110,9 +110,9 @@ fun PinkTheme(
     OwlTheme(darkTheme, colors, content)
 }
 
-private val LightElevation = Elevation()
+private val LightElevation = Elevations()
 
-private val DarkElevation = Elevation(card = 1.dp)
+private val DarkElevation = Elevations(card = 1.dp)
 
 private val LightImages = Images(lockupLogo = R.drawable.ic_lockup_blue)
 
@@ -126,9 +126,9 @@ private fun OwlTheme(
 ) {
     val elevation = if (darkTheme) DarkElevation else LightElevation
     val images = if (darkTheme) DarkImages else LightImages
-    Providers(
-        ElevationAmbient provides elevation,
-        ImageAmbient provides images
+    CompositionLocalProvider(
+        LocalElevations provides elevation,
+        LocalImages provides images
     ) {
         MaterialTheme(
             colors = colors,
@@ -140,7 +140,7 @@ private fun OwlTheme(
 }
 
 /**
- * Alternate to [MaterialTheme] allowing us to add our own theme systems (e.g. [Elevation]) or to
+ * Alternate to [MaterialTheme] allowing us to add our own theme systems (e.g. [Elevations]) or to
  * extend [MaterialTheme]'s types e.g. return our own [Colors] extension
  */
 object OwlTheme {
@@ -148,35 +148,35 @@ object OwlTheme {
     /**
      * Proxy to [MaterialTheme]
      */
-    @Composable
     val colors: Colors
+        @Composable
         get() = MaterialTheme.colors
 
     /**
      * Proxy to [MaterialTheme]
      */
-    @Composable
     val typography: Typography
+        @Composable
         get() = MaterialTheme.typography
 
     /**
      * Proxy to [MaterialTheme]
      */
-    @Composable
     val shapes: Shapes
+        @Composable
         get() = MaterialTheme.shapes
 
     /**
-     * Retrieves the current [Elevation] at the call site's position in the hierarchy.
+     * Retrieves the current [Elevations] at the call site's position in the hierarchy.
      */
-    @Composable
-    val elevations: Elevation
-        get() = ElevationAmbient.current
+    val elevations: Elevations
+        @Composable
+        get() = LocalElevations.current
 
     /**
      * Retrieves the current [Images] at the call site's position in the hierarchy.
      */
-    @Composable
     val images: Images
-        get() = ImageAmbient.current
+        @Composable
+        get() = LocalImages.current
 }

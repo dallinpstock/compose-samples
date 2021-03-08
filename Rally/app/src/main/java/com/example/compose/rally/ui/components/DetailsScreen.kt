@@ -16,16 +16,17 @@
 
 package com.example.compose.rally.ui.components
 
-import androidx.compose.foundation.ScrollableColumn
-import androidx.compose.foundation.Text
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.Stack
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.preferredHeight
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Card
 import androidx.compose.material.MaterialTheme
+import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,29 +45,32 @@ fun <T> StatementBody(
     circleLabel: String,
     rows: @Composable (T) -> Unit
 ) {
-    ScrollableColumn {
-        Stack(Modifier.padding(16.dp)) {
+    Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+        Box(Modifier.padding(16.dp)) {
             val accountsProportion = items.extractProportions { amounts(it) }
             val circleColors = items.map { colors(it) }
             AnimatedCircle(
                 accountsProportion,
                 circleColors,
-                Modifier.preferredHeight(300.dp).gravity(Alignment.Center).fillMaxWidth()
+                Modifier
+                    .height(300.dp)
+                    .align(Alignment.Center)
+                    .fillMaxWidth()
             )
-            Column(modifier = Modifier.gravity(Alignment.Center)) {
+            Column(modifier = Modifier.align(Alignment.Center)) {
                 Text(
                     text = circleLabel,
                     style = MaterialTheme.typography.body1,
-                    modifier = Modifier.gravity(Alignment.CenterHorizontally)
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
                 )
                 Text(
                     text = formatAmount(amountsTotal),
                     style = MaterialTheme.typography.h2,
-                    modifier = Modifier.gravity(Alignment.CenterHorizontally)
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
                 )
             }
         }
-        Spacer(Modifier.preferredHeight(10.dp))
+        Spacer(Modifier.height(10.dp))
         Card {
             Column(modifier = Modifier.padding(12.dp)) {
                 items.forEach { item ->

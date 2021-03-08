@@ -54,7 +54,21 @@ android {
         exclude "/*.jar"
     }
 
+    signingConfigs {
+        // We use a bundled debug keystore, to allow debug builds from CI to be upgradable
+        debug {
+            storeFile rootProject.file('debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
+    }
+
     buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+        }
+
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
@@ -74,7 +88,6 @@ android {
     }
 
     composeOptions {
-        kotlinCompilerVersion Libs.Kotlin.version
         kotlinCompilerExtensionVersion Libs.AndroidX.Compose.version
     }
 }
@@ -84,19 +97,23 @@ dependencies {
     implementation Libs.Coroutines.android
 
     implementation Libs.AndroidX.coreKtx
-    implementation Libs.AndroidX.appcompat
     implementation Libs.AndroidX.palette
-    implementation Libs.material
 
-    implementation Libs.AndroidX.Lifecycle.viewmodel
+    implementation Libs.AndroidX.Activity.activityCompose
+
+    implementation Libs.AndroidX.Constraint.constraintLayoutCompose
 
     implementation Libs.AndroidX.Compose.foundation
-    implementation Libs.AndroidX.Compose.layout
     implementation Libs.AndroidX.Compose.material
     implementation Libs.AndroidX.Compose.materialIconsExtended
     implementation Libs.AndroidX.Compose.tooling
 
+    implementation Libs.AndroidX.Lifecycle.viewmodel
+    implementation Libs.AndroidX.Lifecycle.viewModelCompose
+
     implementation Libs.Accompanist.coil
+
+    implementation Libs.Accompanist.insets
 
     implementation Libs.OkHttp.okhttp
     implementation Libs.OkHttp.logging
@@ -106,6 +123,7 @@ dependencies {
 
     implementation Libs.AndroidX.Room.runtime
     implementation Libs.AndroidX.Room.ktx
+
     kapt Libs.AndroidX.Room.compiler
 
     coreLibraryDesugaring Libs.jdkDesugar

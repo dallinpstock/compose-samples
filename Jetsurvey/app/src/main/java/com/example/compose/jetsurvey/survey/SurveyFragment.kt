@@ -20,10 +20,9 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.FrameLayout
-import androidx.compose.runtime.Recomposer
+import androidx.activity.result.contract.ActivityResultContracts.TakePicture
 import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.ui.platform.setContent
+import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import com.example.compose.jetsurvey.R
@@ -32,15 +31,22 @@ import com.google.android.material.datepicker.MaterialDatePicker
 
 class SurveyFragment : Fragment() {
 
-    private val viewModel: SurveyViewModel by viewModels { SurveyViewModelFactory() }
+    private val viewModel: SurveyViewModel by viewModels {
+        SurveyViewModelFactory(PhotoUriManager(requireContext().applicationContext))
+    }
+
+    private val takePicture = registerForActivityResult(TakePicture()) { photoSaved ->
+        if (photoSaved) {
+            viewModel.onImageSaved()
+        }
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        return FrameLayout(requireContext()).apply {
-
+        return ComposeView(requireContext()).apply {
             // In order for savedState to work, the same ID needs to be used for all instances.
             id = R.id.sign_in_fragment
 
@@ -48,7 +54,7 @@ class SurveyFragment : Fragment() {
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
-            setContent(Recomposer.current()) {
+            setContent {
                 JetsurveyTheme {
                     viewModel.uiState.observeAsState().value?.let { surveyState ->
                         when (surveyState) {
@@ -62,8 +68,9 @@ class SurveyFragment : Fragment() {
                             )
                             is SurveyState.Result -> SurveyResultScreen(
                                 result = surveyState,
-                                onDonePressed = { activity?.onBackPressedDispatcher?.onBackPressed() },
-                                onBackPressed = { activity?.onBackPressedDispatcher?.onBackPressed() }
+                                onDonePressed = {
+                                    activity?.onBackPressedDispatcher?.onBackPressed()
+                                }
                             )
                         }
                     }
@@ -75,7 +82,7 @@ class SurveyFragment : Fragment() {
     private fun handleSurveyAction(questionId: Int, actionType: SurveyActionType) {
         when (actionType) {
             SurveyActionType.PICK_DATE -> showDatePicker(questionId)
-            SurveyActionType.TAKE_PHOTO -> takeAPhoto(questionId)
+            SurveyActionType.TAKE_PHOTO -> takeAPhoto()
             SurveyActionType.SELECT_CONTACT -> selectContact(questionId)
         }
     }
@@ -90,11 +97,12 @@ class SurveyFragment : Fragment() {
         }
     }
 
-    private fun takeAPhoto(questionId: Int) {
-        // unsupported for now
+    private fun takeAPhoto() {
+        takePicture.launch(viewModel.getUriToSaveImage())
     }
 
+    @Suppress("UNUSED_PARAMETER")
     private fun selectContact(questionId: Int) {
-        // unsupported for now
+        // TODO: unsupported for now
     }
 }

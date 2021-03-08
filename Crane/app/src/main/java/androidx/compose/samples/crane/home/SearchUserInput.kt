@@ -16,15 +16,16 @@
 
 package androidx.compose.samples.crane.home
 
-import androidx.compose.animation.ColorPropKey
-import androidx.compose.animation.core.transitionDefinition
+import androidx.compose.animation.animateColor
+import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.transition
-import androidx.compose.foundation.Text
+import androidx.compose.animation.core.updateTransition
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material.MaterialTheme
+import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -32,18 +33,21 @@ import androidx.compose.runtime.setValue
 import androidx.compose.samples.crane.R
 import androidx.compose.samples.crane.base.CraneEditableUserInput
 import androidx.compose.samples.crane.base.CraneUserInput
-import androidx.compose.samples.crane.base.ServiceLocator
 import androidx.compose.samples.crane.home.PeopleUserInputAnimationState.Invalid
 import androidx.compose.samples.crane.home.PeopleUserInputAnimationState.Valid
+import androidx.compose.samples.crane.ui.CraneTheme
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.tooling.preview.Preview
+
+enum class PeopleUserInputAnimationState { Valid, Invalid }
 
 class PeopleUserInputState {
     var people by mutableStateOf(1)
         private set
 
-    var animationState: PeopleUserInputAnimationState = Valid
-        private set
+    val animationState: MutableTransitionState<PeopleUserInputAnimationState> =
+        MutableTransitionState(Valid)
 
     fun addPerson() {
         people = (people % (MAX_PEOPLE + 1)) + 1
@@ -55,7 +59,7 @@ class PeopleUserInputState {
             if (people > MAX_PEOPLE) Invalid
             else Valid
 
-        if (animationState != newState) animationState = newState
+        if (animationState.currentState != newState) animationState.targetState = newState
     }
 }
 
@@ -66,17 +70,9 @@ fun PeopleUserInput(
     peopleState: PeopleUserInputState = remember { PeopleUserInputState() }
 ) {
     Column {
-        val validColor = MaterialTheme.colors.onSurface
-        val invalidColor = MaterialTheme.colors.secondary
-        val transitionDefinition =
-            remember(validColor, invalidColor) {
-                generateTransitionDefinition(
-                    validColor,
-                    invalidColor
-                )
-            }
+        val transitionState = remember { peopleState.animationState }
+        val tint = tintPeopleUserInput(transitionState)
 
-        val transition = transition(transitionDefinition, peopleState.animationState)
         val people = peopleState.people
         CraneUserInput(
             modifier = Modifier.clickable {
@@ -85,9 +81,9 @@ fun PeopleUserInput(
             },
             text = if (people == 1) "$people Adult$titleSuffix" else "$people Adults$titleSuffix",
             vectorImageId = R.drawable.ic_person,
-            tint = transition[tintKey]
+            tint = tint.value
         )
-        if (peopleState.animationState == Invalid) {
+        if (transitionState.targetState == Invalid) {
             Text(
                 text = "Error: We don't support more than $MAX_PEOPLE people",
                 style = MaterialTheme.typography.body1.copy(color = MaterialTheme.colors.secondary)
@@ -112,38 +108,34 @@ fun ToDestinationUserInput(onToDestinationChanged: (String) -> Unit) {
 }
 
 @Composable
-fun DatesUserInput(onDateSelectionClicked: () -> Unit) {
-    val datesSelectedText = ServiceLocator.datesSelected.toString()
+fun DatesUserInput(datesSelected: String, onDateSelectionClicked: () -> Unit) {
     CraneUserInput(
         modifier = Modifier.clickable(onClick = onDateSelectionClicked),
-        caption = if (datesSelectedText.isEmpty()) "Select Dates" else null,
-        text = datesSelectedText,
+        caption = if (datesSelected.isEmpty()) "Select Dates" else null,
+        text = datesSelected,
         vectorImageId = R.drawable.ic_calendar
     )
 }
 
-private val tintKey = ColorPropKey()
+@Composable
+private fun tintPeopleUserInput(
+    transitionState: MutableTransitionState<PeopleUserInputAnimationState>
+): State<Color> {
+    val validColor = MaterialTheme.colors.onSurface
+    val invalidColor = MaterialTheme.colors.secondary
 
-enum class PeopleUserInputAnimationState { Valid, Invalid }
+    val transition = updateTransition(transitionState)
+    return transition.animateColor(
+        transitionSpec = { tween(durationMillis = 300) }
+    ) {
+        if (it == Valid) validColor else invalidColor
+    }
+}
 
-private fun generateTransitionDefinition(
-    validColor: Color,
-    invalidColor: Color
-) = transitionDefinition<PeopleUserInputAnimationState> {
-    state(Valid) {
-        this[tintKey] = validColor
-    }
-    state(Invalid) {
-        this[tintKey] = invalidColor
-    }
-    transition(fromState = Valid) {
-        tintKey using tween(
-            durationMillis = 300
-        )
-    }
-    transition(fromState = Invalid) {
-        tintKey using tween(
-            durationMillis = 300
-        )
+@Preview
+@Composable
+fun PeopleUserInputPreview() {
+    CraneTheme {
+        PeopleUserInput(onPeopleChanged = {})
     }
 }
